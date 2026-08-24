@@ -3,15 +3,15 @@ module github.com/hecc-blot/mq
 go 1.26.1
 
 require (
-	github.com/hecc-blot/framework v0.0.0-20260824134913-06c5932100b4
-	github.com/hecc-blot/trace v0.0.0-20260824134914-c25fb7ad980f
+	github.com/apache/rocketmq-client-go/v2 v2.1.2
+	github.com/hecc-blot/framework v0.1.2
+	github.com/hecc-blot/trace v0.1.2
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/stretchr/testify v1.11.1
 )
 
 require (
-	github.com/apache/rocketmq-client-go/v2 v2.1.2 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic v1.15.1 // indirect
 	github.com/bytedance/sonic/loader v0.5.1 // indirect
