@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/hecc-blot/framework/contract/log"
+	"github.com/hecc-blot/core/contract/log"
 	mqConf "github.com/hecc-blot/mq/config"
 	mqContract "github.com/hecc-blot/mq/contract"
 	mqEnum "github.com/hecc-blot/mq/enum/mq"

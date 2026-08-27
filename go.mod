@@ -4,8 +4,9 @@ go 1.26.1
 
 require (
 	github.com/apache/rocketmq-client-go/v2 v2.1.2
-	github.com/hecc-blot/framework v0.1.2
-	github.com/hecc-blot/trace v0.1.2
+	github.com/hecc-blot/core v0.1.4
+	github.com/hecc-blot/framework v0.1.4
+	github.com/hecc-blot/trace v0.1.3
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/stretchr/testify v1.12.1

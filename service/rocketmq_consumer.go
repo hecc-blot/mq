@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/hecc-blot/framework/contract/log"
+	"github.com/hecc-blot/core/contract/log"
 	"github.com/hecc-blot/framework/util"
 	mqConf "github.com/hecc-blot/mq/config"
 	mqContract "github.com/hecc-blot/mq/contract"
