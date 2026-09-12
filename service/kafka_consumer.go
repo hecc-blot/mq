@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/hecc-blot/core/contract/log"
-	"github.com/hecc-blot/framework/util"
 	mqConf "github.com/hecc-blot/mq/config"
 	mqContract "github.com/hecc-blot/mq/contract"
 	trace "github.com/hecc-blot/trace/contract"
@@ -30,7 +29,6 @@ func (c *kafkaConsumer) Subscribe(ctx context.Context, topic, group string, hand
 	if handler == nil {
 		return errors.New("mq: handler 不能为空")
 	}
-	ctx = util.ExtractContext(ctx)
 
 	n := c.concurrency
 	if sub := mqContract.ApplySubscribeOptions(opts...); sub.Concurrency > 0 {

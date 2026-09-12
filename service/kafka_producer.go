@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"github.com/hecc-blot/framework/util"
 	mqConf "github.com/hecc-blot/mq/config"
 	mqContract "github.com/hecc-blot/mq/contract"
 	trace "github.com/hecc-blot/trace/contract"
@@ -29,8 +28,6 @@ type kafkaProducer struct {
 }
 
 func (p *kafkaProducer) Send(ctx context.Context, msg *mqContract.Message) error {
-	ctx = util.ExtractContext(ctx)
-
 	// 链路追踪传播：把当前 span 注入消息头，消费端可 Extract 串起链路。
 	if p.traceSvc != nil {
 		if msg.Headers == nil {

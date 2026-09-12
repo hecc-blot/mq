@@ -35,6 +35,17 @@ type IMqFactory interface {
     Producer() IProducer
     Consumer() IConsumer
 }
+
+// 消费者注册器
+type IConsume interface {
+    Consume(ctx context.Context, msg *Message) error
+}
+
+type IConsumerHandle interface {
+    Register(topic, group string, consumer IConsume, opts ...SubscribeOption) IConsumerHandle
+    Start(ctx context.Context) error
+    Shutdown() error
+}
 ```
 
 ## 初始化
@@ -51,7 +62,7 @@ if err != nil {
 defer clearUp()
 ```
 
-`logSvc` 为 `log.ILog`（framework），`traceSvc` 为 `trace.ITrace`（trace），均可传 nil。
+`logSvc` 为 `log.ILog`（core），`traceSvc` 为 `trace.ITrace`（trace），均可传 nil。
 
 ## 生产消息
 
@@ -65,7 +76,54 @@ err := producer.Send(ctx, &mqContract.Message{
 })
 ```
 
-## 消费消息
+## 消费者注册（推荐）
+
+业务消费者实现 `IConsume`，用 `inject:""` 声明所需依赖（规则与框架的 `IApi` 完全一致），
+由注册器统一注册、启动与优雅停止，依赖在**注册期**自动注入。
+
+```go
+import (
+    "context"
+    dbContract "github.com/hecc-blot/db/contract"
+    logContract "github.com/hecc-blot/core/contract/log"
+)
+
+// 1. 定义消费者：注入字段在前，方法签名与 IApi.Call 同构
+type OrderCreatedConsumer struct {
+    Db     dbContract.IDb   `inject:""`
+    LogSvc logContract.ILog `inject:""`
+}
+
+func (c *OrderCreatedConsumer) Consume(ctx context.Context, msg *mqContract.Message) error {
+    c.LogSvc.Info(ctx, "订单创建", "body", string(msg.Body))
+    return nil // 返回 nil 确认，返回 error 重投
+}
+
+// 2. 组装期：注册 → 启动 → defer 停止
+//    必须在 container.Set 完所有依赖之后
+consumerHandle := mqService.NewConsumerHandle(mqFactory.Consumer(), container, logSvc)
+consumerHandle.
+    Register("order-created", "order-service", &OrderCreatedConsumer{}).
+    Register("order-paid", "order-service", &OrderPaidConsumer{}, mqContract.WithConcurrency(4))
+
+if err := consumerHandle.Start(context.Background()); err != nil {
+    panic(err)
+}
+// 在 defer mqCleanup() 之后注册，LIFO 保证先停消费者、再关连接
+defer consumerHandle.Shutdown()
+```
+
+约定：
+
+- **注入字段必须放在最前面**。`ioc.Inject` 遍历时遇到第一个没有 `inject` tag 的具名字段即停止，其后的依赖字段会被静默跳过。
+- **一个注册对应一个长期实例**。消息是参数传入的，结构体内没有每条消息的状态，故不做请求级隔离。**消费并发 > 1 时 `Consume` 会被并发调用，实现方需自行保证并发安全。**
+- **topic + group 必须唯一**。topic/group 为空、consumer 为 nil、同一 topic+group 重复注册、`Start` 之后再注册 —— 都会 panic（启动期编程错误）。
+- **`Start` 部分失败会整体关闭**。`IConsumer.Close` 只能整体关闭、无法只回退已成功的订阅，因此失败后注册器不可再用。
+- **`Shutdown` 幂等**，可重复调用。
+
+## 直接订阅（底层原语）
+
+不需要依赖注入、或要做运行时动态订阅时，直接用 `IConsumer`：
 
 ```go
 consumer := mqFactory.Consumer()
@@ -117,6 +175,7 @@ if c, ok := mqFactory.Consumer().(mqContract.IOrderedConsumer); ok {
 | 延迟投递 | ❌ | ✅ 任意时长 | ✅ 预定义等级（1s~2h） |
 | 顺序消费 | ✅ 分区内有序 | ❌ | ✅ 队列串行 |
 | 链路追踪传播 | ✅ Headers | ❌ 无消息头 | ✅ Properties |
+| `WithConcurrency` | ✅ | ✅ 映射为 MaxInFlight | ❌ 由队列驱动，选项被忽略 |
 
 ## 配置
 
@@ -158,11 +217,12 @@ import "github.com/hecc-blot/mq/mocks"
 mockFactory := &mocks.MockMqFactory{}
 mockProducer := &mocks.MockProducer{}
 mockConsumer := &mocks.MockConsumer{}
+mockConsumerHandle := &mocks.MockConsumerHandle{} // 记录 Registrations，便于断言注册行为
 ```
 
 ## 相关模块
 
 | 模块 | 说明 |
 |------|------|
-| [framework](https://github.com/hecc-blot/framework) | `log.ILog`、IOC 注入 |
+| [core](https://github.com/hecc-blot/core) | `log.ILog`（日志契约）、`ioc.IContainer`（依赖注入） |
 | [trace](https://github.com/hecc-blot/trace) | `trace.ITrace` 链路追踪传播 |

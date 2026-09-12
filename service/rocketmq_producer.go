@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hecc-blot/framework/util"
 	mqConf "github.com/hecc-blot/mq/config"
 	mqContract "github.com/hecc-blot/mq/contract"
 	trace "github.com/hecc-blot/trace/contract"
@@ -73,7 +72,6 @@ func (p *rocketmqProducer) SendDelay(ctx context.Context, msg *mqContract.Messag
 
 // buildMessage 构造 RocketMQ 消息并注入链路追踪到 Properties。
 func (p *rocketmqProducer) buildMessage(ctx context.Context, msg *mqContract.Message) *primitive.Message {
-	ctx = util.ExtractContext(ctx)
 	if p.traceSvc != nil {
 		if msg.Headers == nil {
 			msg.Headers = make(map[string]string)

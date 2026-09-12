@@ -46,6 +46,8 @@ type Subscription struct {
 	Topic   string
 	Group   string
 	Handler mqContract.Handler
+	// Opts 记录本次订阅传入的配置项，便于断言 WithConcurrency 等是否被原样透传。
+	Opts []mqContract.SubscribeOption
 }
 
 // MockConsumer 是 IConsumer / IOrderedConsumer 接口的 mock 实现。
@@ -63,7 +65,7 @@ func (m *MockConsumer) Subscribe(ctx context.Context, topic, group string, handl
 	if m.SubscribeFn != nil {
 		return m.SubscribeFn(ctx, topic, group, handler, opts...)
 	}
-	m.Subscriptions = append(m.Subscriptions, Subscription{Topic: topic, Group: group, Handler: handler})
+	m.Subscriptions = append(m.Subscriptions, Subscription{Topic: topic, Group: group, Handler: handler, Opts: opts})
 	return nil
 }
 
@@ -102,6 +104,47 @@ func (m *MockMqFactory) Consumer() mqContract.IConsumer {
 	return &MockConsumer{}
 }
 
+// ConsumerRegistration 记录注册器的一次注册，供测试断言。
+type ConsumerRegistration struct {
+	Topic    string
+	Group    string
+	Consumer mqContract.IConsume
+	Opts     []mqContract.SubscribeOption
+}
+
+// MockConsumerHandle 是 IConsumerHandle 接口的 mock 实现。
+// 通过 RegisterFn / StartFn / ShutdownFn 定制行为，未设置时记录到 Registrations 并返回 nil。
+type MockConsumerHandle struct {
+	RegisterFn func(topic, group string, consumer mqContract.IConsume, opts ...mqContract.SubscribeOption) mqContract.IConsumerHandle
+	StartFn    func(ctx context.Context) error
+	ShutdownFn func() error
+
+	// Registrations 记录注册项，便于断言。
+	Registrations []ConsumerRegistration
+}
+
+func (m *MockConsumerHandle) Register(topic, group string, consumer mqContract.IConsume, opts ...mqContract.SubscribeOption) mqContract.IConsumerHandle {
+	if m.RegisterFn != nil {
+		return m.RegisterFn(topic, group, consumer, opts...)
+	}
+	m.Registrations = append(m.Registrations, ConsumerRegistration{Topic: topic, Group: group, Consumer: consumer, Opts: opts})
+	return m
+}
+
+func (m *MockConsumerHandle) Start(ctx context.Context) error {
+	if m.StartFn != nil {
+		return m.StartFn(ctx)
+	}
+	return nil
+}
+
+func (m *MockConsumerHandle) Shutdown() error {
+	if m.ShutdownFn != nil {
+		return m.ShutdownFn()
+	}
+	return nil
+}
+
 // 编译期断言：确保 mock 完整实现各接口。
 var (
 	_ mqContract.IProducer        = (*MockProducer)(nil)
@@ -109,4 +152,5 @@ var (
 	_ mqContract.IConsumer        = (*MockConsumer)(nil)
 	_ mqContract.IOrderedConsumer = (*MockConsumer)(nil)
 	_ mqContract.IMqFactory       = (*MockMqFactory)(nil)
+	_ mqContract.IConsumerHandle  = (*MockConsumerHandle)(nil)
 )
