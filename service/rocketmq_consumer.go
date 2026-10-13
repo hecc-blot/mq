@@ -38,7 +38,7 @@ func (c *rocketmqConsumer) SubscribeOrdered(ctx context.Context, topic, group st
 
 func (c *rocketmqConsumer) subscribe(ctx context.Context, topic, group string, handler mqContract.Handler, order bool) error {
 	if handler == nil {
-		return errors.New("mq: handler 不能为空")
+		return errors.New("mq: handler must not be nil")
 	}
 
 	popts := []consumer.Option{

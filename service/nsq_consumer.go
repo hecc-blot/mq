@@ -24,7 +24,7 @@ type nsqConsumer struct {
 
 func (c *nsqConsumer) Subscribe(ctx context.Context, topic, group string, handler mqContract.Handler, opts ...mqContract.SubscribeOption) error {
 	if handler == nil {
-		return errors.New("mq: handler 不能为空")
+		return errors.New("mq: handler must not be nil")
 	}
 
 	n := c.concurrency
@@ -81,7 +81,7 @@ func (c *nsqConsumer) handle(ctx context.Context, topic string, m *nsq.Message, 
 	if acked {
 		return nil // go-nsq 自动 FIN
 	}
-	return errors.New("mq: 消费失败") // go-nsq 自动 REQ（原生退避）
+	return errors.New("mq: consume failed") // go-nsq 自动 REQ（原生退避）
 }
 
 func (c *nsqConsumer) Close() error {

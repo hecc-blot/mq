@@ -27,7 +27,7 @@ type kafkaConsumer struct {
 
 func (c *kafkaConsumer) Subscribe(ctx context.Context, topic, group string, handler mqContract.Handler, opts ...mqContract.SubscribeOption) error {
 	if handler == nil {
-		return errors.New("mq: handler 不能为空")
+		return errors.New("mq: handler must not be nil")
 	}
 
 	n := c.concurrency

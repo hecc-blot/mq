@@ -95,7 +95,7 @@ func (p *rocketmqProducer) sendSync(ctx context.Context, pm *primitive.Message) 
 		return err
 	}
 	if res.Status != primitive.SendOK {
-		return fmt.Errorf("mq: rocketmq 发送失败, status=%v", res.Status)
+		return fmt.Errorf("mq: rocketmq send failed, status=%v", res.Status)
 	}
 	return nil
 }

@@ -43,10 +43,10 @@ var _ mqContract.IConsumerHandle = (*ConsumerHandle)(nil)
 // logger 可为 nil，传 nil 时不输出启动日志。
 func NewConsumerHandle(consumer mqContract.IConsumer, container ioc.IContainer, logger log.ILog) mqContract.IConsumerHandle {
 	if consumer == nil {
-		panic("mq: consumer 不能为空")
+		panic("mq: consumer must not be nil")
 	}
 	if container == nil {
-		panic("ioc: 注入容器不能为空")
+		panic("ioc: container must not be nil")
 	}
 	return &ConsumerHandle{consumer: consumer, container: container, logger: logger}
 }
@@ -54,24 +54,24 @@ func NewConsumerHandle(consumer mqContract.IConsumer, container ioc.IContainer, 
 // Register 注册一个消费者，并在注册期完成依赖注入（与框架 ApiHandle 注册期注入一致）。
 func (h *ConsumerHandle) Register(topic, group string, consumer mqContract.IConsume, opts ...mqContract.SubscribeOption) mqContract.IConsumerHandle {
 	if consumer == nil {
-		panic("mq: 消费者不能为空")
+		panic("mq: consumer must not be nil")
 	}
 	if topic == "" || group == "" {
-		panic(fmt.Errorf("mq: topic 与 group 不能为空(topic = %q, group = %q)", topic, group))
+		panic(fmt.Errorf("mq: topic and group must not be empty (topic = %q, group = %q)", topic, group))
 	}
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	if h.started {
-		panic(fmt.Errorf("mq: 消费者注册必须在 Start 之前(topic = %s, group = %s)", topic, group))
+		panic(fmt.Errorf("mq: consumers must be registered before Start (topic = %s, group = %s)", topic, group))
 	}
 	if h.closed {
-		panic(fmt.Errorf("mq: 注册器已关闭，不能再注册消费者(topic = %s, group = %s)", topic, group))
+		panic(fmt.Errorf("mq: registry is closed, cannot register more consumers (topic = %s, group = %s)", topic, group))
 	}
 	for _, e := range h.entries {
 		if e.topic == topic && e.group == group {
-			panic(fmt.Errorf("mq: 重复注册同一 topic+group(topic = %s, group = %s)", topic, group))
+			panic(fmt.Errorf("mq: duplicate registration for the same topic+group (topic = %s, group = %s)", topic, group))
 		}
 	}
 
@@ -86,10 +86,10 @@ func (h *ConsumerHandle) Start(ctx context.Context) error {
 	defer h.mu.Unlock()
 
 	if h.closed {
-		return errors.New("mq: 注册器已关闭，不能再启动")
+		return errors.New("mq: registry is closed, cannot start")
 	}
 	if h.started {
-		return errors.New("mq: 消费者已启动")
+		return errors.New("mq: consumers already started")
 	}
 
 	for _, entry := range h.entries {
@@ -100,7 +100,7 @@ func (h *ConsumerHandle) Start(ctx context.Context) error {
 			// IConsumer.Close 只能整体关闭，无法只回退这一条订阅。
 			_ = h.consumer.Close()
 			h.closed = true
-			return fmt.Errorf("mq: 订阅失败(topic = %s, group = %s): %w", entry.topic, entry.group, err)
+			return fmt.Errorf("mq: subscribe failed (topic = %s, group = %s): %w", entry.topic, entry.group, err)
 		}
 		if h.logger != nil {
 			h.logger.Info(ctx, "mq消费者已启动", "topic", entry.topic, "group", entry.group)

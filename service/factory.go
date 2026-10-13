@@ -23,14 +23,14 @@ func (f *Factory) Consumer() mqContract.IConsumer { return f.consumer }
 // traceSvc 可传 nil，传 nil 时不开启链路追踪传播。
 func NewMqFactory(cfg *mqConf.Config, logger log.ILog, traceSvc trace.ITrace) (mqContract.IMqFactory, func(), error) {
 	if cfg == nil {
-		return nil, func() {}, fmt.Errorf("mq: 配置不能为空")
+		return nil, func() {}, fmt.Errorf("mq: config must not be nil")
 	}
 	c := mqConf.Normalize(*cfg)
 
 	switch c.Driver {
 	case mqEnum.Kafka:
 		if len(c.Kafka.Brokers) == 0 {
-			return nil, func() {}, fmt.Errorf("mq: kafka brokers 未配置")
+			return nil, func() {}, fmt.Errorf("mq: kafka brokers is not configured")
 		}
 		producer := newKafkaProducer(&c.Kafka, traceSvc)
 		consumer := newKafkaConsumer(&c.Kafka, &c.Consumer, logger, traceSvc)
@@ -40,7 +40,7 @@ func NewMqFactory(cfg *mqConf.Config, logger log.ILog, traceSvc trace.ITrace) (m
 		}, nil
 	case mqEnum.Nsq:
 		if len(c.Nsq.Nsqd) == 0 {
-			return nil, func() {}, fmt.Errorf("mq: nsq 未配置 nsqd 地址")
+			return nil, func() {}, fmt.Errorf("mq: nsqd address is not configured for nsq")
 		}
 		producer, err := newNsqProducer(&c.Nsq)
 		if err != nil {
@@ -53,7 +53,7 @@ func NewMqFactory(cfg *mqConf.Config, logger log.ILog, traceSvc trace.ITrace) (m
 		}, nil
 	case mqEnum.RocketMQ:
 		if len(c.RocketMQ.NameServer) == 0 {
-			return nil, func() {}, fmt.Errorf("mq: rocketmq 未配置 name_server")
+			return nil, func() {}, fmt.Errorf("mq: name_server is not configured for rocketmq")
 		}
 		producer, err := newRocketmqProducer(&c.RocketMQ, traceSvc)
 		if err != nil {
@@ -65,6 +65,6 @@ func NewMqFactory(cfg *mqConf.Config, logger log.ILog, traceSvc trace.ITrace) (m
 			_ = consumer.Close()
 		}, nil
 	default:
-		return nil, func() {}, fmt.Errorf("mq: 暂不支持的后端类型: %v", c.Driver)
+		return nil, func() {}, fmt.Errorf("mq: unsupported backend type: %v", c.Driver)
 	}
 }

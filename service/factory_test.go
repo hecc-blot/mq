@@ -24,7 +24,7 @@ func TestNewMqFactoryUnsupportedDriver(t *testing.T) {
 	cfg := mqConf.Config{Driver: mqEnum.Value("unknown")}
 	_, _, err := NewMqFactory(&cfg, nil, nil)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "不支持")
+	assert.Contains(t, err.Error(), "unsupported")
 }
 
 func TestNewMqFactoryNsqWithoutNsqd(t *testing.T) {
