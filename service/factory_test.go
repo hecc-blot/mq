@@ -20,6 +20,24 @@ func TestNewMqFactoryKafkaWithoutBrokers(t *testing.T) {
 	assert.Contains(t, err.Error(), "brokers")
 }
 
+func TestNewMqFactoryKafkaInvalidStartOffset(t *testing.T) {
+	cfg := mqConf.Config{
+		Driver: mqEnum.Kafka,
+		Kafka: mqConf.Kafka{
+			Brokers:     []string{"127.0.0.1:9092"},
+			StartOffset: mqEnum.OffsetPolicy("middle"),
+		},
+	}
+	_, _, err := NewMqFactory(&cfg, nil, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "start_offset")
+}
+
+func TestNormalizeKafkaStartOffsetDefault(t *testing.T) {
+	cfg := mqConf.Normalize(mqConf.Config{})
+	assert.Equal(t, mqEnum.LastOffset, cfg.Kafka.StartOffset)
+}
+
 func TestNewMqFactoryUnsupportedDriver(t *testing.T) {
 	cfg := mqConf.Config{Driver: mqEnum.Value("unknown")}
 	_, _, err := NewMqFactory(&cfg, nil, nil)

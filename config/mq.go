@@ -24,6 +24,10 @@ type Config struct {
 type Kafka struct {
 	// Brokers broker 地址列表，如 ["127.0.0.1:9092"]。
 	Brokers []string `mapstructure:"brokers"`
+	// StartOffset 新消费者组首次订阅时的起始位置：last（最新，默认）/ first（最早）。
+	// 只在 group 尚无已提交 offset 时生效；已有 offset 的组以已提交 offset 为准，
+	// 改这个配置不会重置已有消费组（需换 group 名或用 kafka-consumer-groups --reset-offsets）。
+	StartOffset mqEnum.OffsetPolicy `mapstructure:"start_offset"`
 }
 
 // Nsq NSQ 后端配置。
@@ -55,6 +59,9 @@ type Consumer struct {
 func Normalize(cfg Config) Config {
 	if cfg.Driver == "" {
 		cfg.Driver = mqEnum.Kafka
+	}
+	if cfg.Kafka.StartOffset == "" {
+		cfg.Kafka.StartOffset = mqEnum.LastOffset
 	}
 	if cfg.Consumer.Concurrency <= 0 {
 		cfg.Consumer.Concurrency = DefaultConcurrency

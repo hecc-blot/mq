@@ -32,6 +32,9 @@ func NewMqFactory(cfg *mqConf.Config, logger log.ILog, traceSvc trace.ITrace) (m
 		if len(c.Kafka.Brokers) == 0 {
 			return nil, func() {}, fmt.Errorf("mq: kafka brokers is not configured")
 		}
+		if !c.Kafka.StartOffset.Valid() {
+			return nil, func() {}, fmt.Errorf("mq: invalid kafka start_offset: %s (must be first or last)", c.Kafka.StartOffset)
+		}
 		producer := newKafkaProducer(&c.Kafka, traceSvc)
 		consumer := newKafkaConsumer(&c.Kafka, &c.Consumer, logger, traceSvc)
 		return &Factory{producer: producer, consumer: consumer}, func() {

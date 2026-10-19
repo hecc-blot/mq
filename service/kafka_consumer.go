@@ -9,6 +9,7 @@ import (
 	"github.com/hecc-blot/core/contract/log"
 	mqConf "github.com/hecc-blot/mq/config"
 	mqContract "github.com/hecc-blot/mq/contract"
+	mqEnum "github.com/hecc-blot/mq/enum/mq"
 	trace "github.com/hecc-blot/trace/contract"
 
 	"github.com/segmentio/kafka-go"
@@ -16,6 +17,7 @@ import (
 
 type kafkaConsumer struct {
 	brokers     []string
+	startOffset int64
 	concurrency int
 	logger      log.ILog
 	traceSvc    trace.ITrace
@@ -44,6 +46,7 @@ func (c *kafkaConsumer) Subscribe(ctx context.Context, topic, group string, hand
 			GroupTopics: []string{topic},
 			MinBytes:    10e3, // 10KB
 			MaxBytes:    10e6, // 10MB
+			StartOffset: c.startOffset,
 		})
 		c.readers = append(c.readers, reader)
 		c.wg.Add(1)
@@ -139,10 +142,20 @@ func (c *kafkaConsumer) extractTrace(headers map[string]string) context.Context 
 func newKafkaConsumer(cfg *mqConf.Kafka, consumerCfg *mqConf.Consumer, logger log.ILog, traceSvc trace.ITrace) *kafkaConsumer {
 	return &kafkaConsumer{
 		brokers:     cfg.Brokers,
+		startOffset: kafkaStartOffset(cfg.StartOffset),
 		concurrency: consumerCfg.Concurrency,
 		logger:      logger,
 		traceSvc:    traceSvc,
 	}
+}
+
+// kafkaStartOffset 将配置策略映射为 kafka-go 的 StartOffset 常量。
+// 非法值在 NewMqFactory 已拦截；空值兜底为模块默认 last，与 Normalize 保持一致。
+func kafkaStartOffset(policy mqEnum.OffsetPolicy) int64 {
+	if policy == mqEnum.FirstOffset {
+		return kafka.FirstOffset
+	}
+	return kafka.LastOffset
 }
 
 // toKafkaHeaders map[string]string → []kafka.Header。

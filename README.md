@@ -240,6 +240,7 @@ mq:
   driver: kafka                    # kafka / nsq / rocketmq，默认 kafka
   kafka:
     brokers: ["127.0.0.1:9092"]
+    start_offset: last             # last（最新，默认）/ first（最早），仅新消费者组首次订阅生效
   nsq:
     nsqd: ["127.0.0.1:4150"]       # 生产端必填
     nsqlookupd: ["127.0.0.1:4161"] # 可选，服务发现
@@ -256,6 +257,7 @@ mq:
 |--------|------|--------|------|
 | `driver` | string | `kafka` | 后端类型 |
 | `kafka.brokers` | []string | — | Kafka broker 地址列表（必填） |
+| `kafka.start_offset` | string | `last` | 新消费者组首次订阅的起始位置：`last`（只消费新消息）/ `first`（回放历史）；仅在该 group 无已提交 offset 时生效 |
 | `nsq.nsqd` | []string | — | nsqd tcp 地址列表（生产端必填） |
 | `nsq.nsqlookupd` | []string | — | nsqlookupd http 地址列表 |
 | `rocketmq.name_server` | []string | — | NameServer 地址列表（必填） |
@@ -263,7 +265,11 @@ mq:
 | `rocketmq.access_key` / `secret_key` | string | 空 | ACL 认证，空则不启用 |
 | `consumer.concurrency` | int | 1 | 默认消费并发数，可被 `WithConcurrency` 覆盖 |
 
-缺少对应后端的必填项时 `NewMqFactory` 返回 error；`driver` 不支持时同样返回 error。
+缺少对应后端的必填项时 `NewMqFactory` 返回 error；`driver` 不支持、`kafka.start_offset` 非法时同样返回 error。
+
+> `start_offset` 只在**新消费者组首次订阅**（该 group 在分区上没有已提交 offset）时生效。已有 committed offset 的组以其为准——改配置不会重置进度，需要换 group 名或用 `kafka-consumer-groups --reset-offsets`。
+>
+> 默认 `last` 与 Kafka `auto.offset.reset=latest`、RocketMQ `CONSUME_FROM_LAST_OFFSET`、NSQ 新建 channel 的行为一致，避免 group 名写错 / 环境重建 / offset 过期时整 topic 重放。需要补历史数据时，另起一个**独立 group** 配 `first` 做一次性回放，不要动主 group。
 
 ## 后端能力矩阵
 
